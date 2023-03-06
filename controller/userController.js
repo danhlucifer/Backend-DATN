@@ -2,15 +2,21 @@ const User = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
 const { generateToken } = require("../config/jwtToken");
 const validateMongodbId = require("../utils/validateMongodbId");
+const { generateRefreshToken } = require("../config/refreshtoken");
+const jwt = require("jsonwebtoken");
+
 // Tao User
 const createUser = asyncHandler(async (req, res) => {
   const email = req.body.email;
+
   const findUser = await User.findOne({ email: email });
+
   if (!findUser) {
+    // create a new User
     const newUser = await User.create(req.body);
     res.json(newUser);
   } else {
-    throw new Error("User Already Exists");
+    throw new Error("User already Exists!");
   }
 });
 
@@ -19,12 +25,29 @@ const loginUserCtrl = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const findUser = await User.findOne({ email });
   if (findUser && (await findUser.isPasswordMatched(password))) {
+    // refreshToken
+    const refreshToken = await generateRefreshToken(findUser?._id);
+    const updateuser = await User.findByIdAndUpdate(
+      findUser.id,
+      {
+        refreshToken: refreshToken,
+      },
+      {
+        new: true,
+      }
+    );
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      maxAge: 72 * 60 * 60 * 1000, //3 ngày
+    });
+
     res.json({
       _id: findUser?._id,
-      firstname: findUser?.firstname,
-      lastname: findUser?.lastname,
+      firstName: findUser?.firstName,
+      lastName: findUser?.lastName,
       email: findUser?.email,
       mobile: findUser?.mobile,
+      password: findUser?.password,
       token: generateToken(findUser?._id),
     });
   } else {
@@ -32,6 +55,25 @@ const loginUserCtrl = asyncHandler(async (req, res) => {
   }
 });
 
+// handle refresh token
+const handleRefreshToken = asyncHandler(async (req, res) => {
+  const cookie = req.cookies;
+  if (!cookie?.refreshToken) throw new Error("No Refresh Token in Cookies!");
+
+  const refreshToken = cookie.refreshToken;
+  const user = await User.findOne({ refreshToken });
+  if (!user) throw new Error("No Refresh token present in DB or Not matched");
+  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, decoded) => {
+    if (err || user.id !== decoded.id) {
+      throw new Error("There is something wrong with refresh token");
+    }
+    const accessToken = generateToken(user?._id);
+    res.json({ accessToken });
+  });
+});
+
+
+// get all User
 const getallUser = asyncHandler(async (req, res) => {
   try {
     const getUsers = await User.find();
@@ -76,10 +118,10 @@ const updateAdmin = asyncHandler(async (req, res) => {
   }
 });
 
-const updateUser = asyncHandler(async (req, res) => {
+const updatedUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
   try {
-    const updateUser = await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       id,
       {
         firstName: req?.body?.firstName,
@@ -91,7 +133,7 @@ const updateUser = asyncHandler(async (req, res) => {
         new: true,
       }
     );
-    res.json(updateUser);
+    res.json(updatedUser);
   } catch (error) {
     throw new Error(error);
   }
@@ -99,43 +141,43 @@ const updateUser = asyncHandler(async (req, res) => {
 
 // Block User
 const blockUser = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    validateMongodbId(id);
-    try {
-      const block = await User.findByIdAndUpdate(
-        id,
-        {
-          isBlocked: true,
-        },
-        {
-          new: true,
-        }
-      );
-      res.json(block);
-    } catch (error) {
-      throw new Error(error);
-    }
-  });
-  
-  // Un Block User
-  const unblockUser = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    validateMongodbId(id);
-    try {
-      const unBlock = await User.findByIdAndUpdate(
-        id,
-        {
-          isBlocked: false,
-        },
-        {
-          new: true,
-        }
-      );
-      res.json(unBlock);
-    } catch (error) {
-      throw new Error(error);
-    }
-  });
+  const { id } = req.params;
+  validateMongodbId(id);
+  try {
+    const block = await User.findByIdAndUpdate(
+      id,
+      {
+        isBlocked: true,
+      },
+      {
+        new: true,
+      }
+    );
+    res.json(block);
+  } catch (error) {
+    throw new Error(error);
+  }
+});
+
+// Un Block User
+const unblockUser = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  validateMongodbId(id);
+  try {
+    const unBlock = await User.findByIdAndUpdate(
+      id,
+      {
+        isBlocked: false,
+      },
+      {
+        new: true,
+      }
+    );
+    res.json(unBlock);
+  } catch (error) {
+    throw new Error(error);
+  }
+});
 
 // Delete User
 const deleteUser = asyncHandler(async (req, res) => {
@@ -155,7 +197,8 @@ module.exports = {
   getUser,
   deleteUser,
   updateAdmin,
-  updateUser,
+  updatedUser,
   blockUser,
-  unblockUser
+  unblockUser,
+  handleRefreshToken,
 };
