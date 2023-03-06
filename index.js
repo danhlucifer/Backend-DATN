@@ -1,14 +1,15 @@
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
-require("dotenv").config();
 const { notFound, errorHandler } = require("./middlewares/errorHandler");
 const authRouter = require("./routes/authRoute");
 const productRouter = require("./routes/productRoute")
 const cookieParser = require("cookie-parser");
-const mongoose = require("mongoose");
+const morgan = require("morgan")
 require("dotenv").config();
 
+
+app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
