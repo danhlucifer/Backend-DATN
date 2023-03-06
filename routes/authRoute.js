@@ -9,7 +9,8 @@ const {
   deleteUser,
   blockUser,
   unblockUser,
-  handleRefreshToken
+  handleRefreshToken,
+  logout,
 } = require("../controller/userController");
 const router = express.Router();
 
@@ -20,6 +21,9 @@ router.post("/login", loginUserCtrl);
 
 // refresh
 router.get("/refresh", handleRefreshToken);
+
+// logout
+router.get("/logout", logout);
 
 router.get("/all-user", getallUser);
 // get user by id
