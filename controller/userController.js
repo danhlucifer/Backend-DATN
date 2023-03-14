@@ -362,7 +362,8 @@ const getUserCart = asyncHandler(async (req, res) => {
   validateMongodbId(_id);
   try {
     const cart = await Cart.findOne({ orderby: _id }).populate(
-      "products.product", "_id title price totalAfterDiscount"
+      "products.product",
+      "_id title price totalAfterDiscount"
     );
     res.json(cart);
   } catch (error) {
@@ -370,17 +371,41 @@ const getUserCart = asyncHandler(async (req, res) => {
   }
 });
 
-const emptyCart = asyncHandler(async (req, res) =>{
-  const {_id} = req.user;
+const emptyCart = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
   validateMongodbId(_id);
   try {
-    const user = await User.findOne({_id});
-    const cart = await Cart.findOneAndRemove({orderby: user._id});
-    res.json(cart)
+    const user = await User.findOne({ _id });
+    const cart = await Cart.findOneAndRemove({ orderby: user._id });
+    res.json(cart);
   } catch (error) {
-    throw new Error(error)
+    throw new Error(error);
   }
-})
+});
+
+const applyCoupon = asyncHandler(async (req, res) => {
+  const { coupon } = req.body;
+  const { _id } = req.user;
+  validateMongodbId(_id);
+  const validCoupon = await Coupon.findOne({ name: coupon });
+  if (validCoupon === null) {
+    throw new Error("Invalid Coupon");
+  }
+  const user = await User.findOne({ _id });
+  let { cartTotal } = await Cart.findOne({
+    orderby: user._id,
+  }).populate("products.product");
+  let totalAfterDiscount = (
+    cartTotal -
+    (cartTotal * validCoupon.discount) / 100
+  ).toFixed(2);
+  await Cart.findOneAndUpdate(
+    { orderby: user._id },
+    { totalAfterDiscount },
+    { new: true }
+  );
+  res.json(totalAfterDiscount);
+});
 
 module.exports = {
   createUser,
@@ -401,5 +426,6 @@ module.exports = {
   saveAddress,
   userCart,
   getUserCart,
-  emptyCart
+  emptyCart,
+  applyCoupon,
 };

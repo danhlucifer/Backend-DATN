@@ -5,7 +5,6 @@ const {
   getallUser,
   getUser,
   updatedUser,
-  updateAdmin,
   deleteUser,
   blockUser,
   unblockUser,
@@ -20,6 +19,7 @@ const {
   userCart,
   getUserCart,
   emptyCart,
+  applyCoupon,
 } = require("../controller/userController");
 const router = express.Router();
 
@@ -41,6 +41,7 @@ router.post("/login", loginUserCtrl);
 router.post("/admin-login", loginAdmin);
 
 router.post("/cart", authMiddleware, userCart);
+router.post("/cart/applyCoupon", authMiddleware, applyCoupon)
 
 router.get("/all-user", getallUser);
 
@@ -52,7 +53,7 @@ router.get("/logout", logout);
 
 router.get("/wishlist", authMiddleware, getWishlist);
 
-router.get("/cart", authMiddleware, getUserCart)
+router.get("/cart", authMiddleware, getUserCart);
 
 // get user by id
 router.get("/:id", authMiddleware, isAdmin, getUser);
