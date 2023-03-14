@@ -16,7 +16,10 @@ const {
   resetPassword,
   loginAdmin,
   getWishlist,
-  saveAddress
+  saveAddress,
+  userCart,
+  getUserCart,
+  emptyCart,
 } = require("../controller/userController");
 const router = express.Router();
 
@@ -31,11 +34,13 @@ router.post("/forgot-password-token", forgotPasswordToken);
 router.put("/reset-password/:token", resetPassword);
 
 // update password
-router.put("/password", authMiddleware ,updatePassword)
+router.put("/password", authMiddleware, updatePassword);
 
 router.post("/login", loginUserCtrl);
 
 router.post("/admin-login", loginAdmin);
+
+router.post("/cart", authMiddleware, userCart);
 
 router.get("/all-user", getallUser);
 
@@ -45,25 +50,25 @@ router.get("/refresh", handleRefreshToken);
 // logout
 router.get("/logout", logout);
 
-router.get("/wishlist",authMiddleware ,getWishlist); 
+router.get("/wishlist", authMiddleware, getWishlist);
+
+router.get("/cart", authMiddleware, getUserCart)
 
 // get user by id
-router.get("/:id",authMiddleware, isAdmin ,getUser); 
+router.get("/:id", authMiddleware, isAdmin, getUser);
+router.delete("/empty-cart", authMiddleware, emptyCart);
 
 // edit User
-router.put("/edit-user",authMiddleware, updatedUser);
+router.put("/edit-user", authMiddleware, updatedUser);
 
 // save address
-router.put("/save-address", authMiddleware, saveAddress)
+router.put("/save-address", authMiddleware, saveAddress);
 
 // block
-router.put("/block-user/:id",authMiddleware, blockUser);
-router.put("/unblock-user/:id",authMiddleware, unblockUser);
+router.put("/block-user/:id", authMiddleware, blockUser);
+router.put("/unblock-user/:id", authMiddleware, unblockUser);
 
-
-// delete user 
+// delete user
 router.delete("/:id", deleteUser);
-
-
 
 module.exports = router;
