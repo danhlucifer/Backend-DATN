@@ -13,7 +13,10 @@ const {
   logout,
   updatePassword,
   forgotPasswordToken,
-  resetPassword
+  resetPassword,
+  loginAdmin,
+  getWishlist,
+  saveAddress
 } = require("../controller/userController");
 const router = express.Router();
 
@@ -32,27 +35,35 @@ router.put("/password", authMiddleware ,updatePassword)
 
 router.post("/login", loginUserCtrl);
 
+router.post("/admin-login", loginAdmin);
+
+router.get("/all-user", getallUser);
+
 // refresh
 router.get("/refresh", handleRefreshToken);
 
 // logout
 router.get("/logout", logout);
 
-router.get("/all-user", getallUser);
+router.get("/wishlist",authMiddleware ,getWishlist); 
+
 // get user by id
 router.get("/:id",authMiddleware, isAdmin ,getUser); 
 
-// update user
-router.put("/:id", updatedUser);
+// edit User
+router.put("/edit-user",authMiddleware, updatedUser);
+
+// save address
+router.put("/save-address", authMiddleware, saveAddress)
 
 // block
 router.put("/block-user/:id",authMiddleware, blockUser);
 router.put("/unblock-user/:id",authMiddleware, unblockUser);
 
+
 // delete user 
 router.delete("/:id", deleteUser);
 
-// edit info Admin
-router.put("/edit-user",authMiddleware, updateAdmin);
+
 
 module.exports = router;

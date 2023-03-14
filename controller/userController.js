@@ -22,7 +22,7 @@ const createUser = asyncHandler(async (req, res) => {
   }
 });
 
-// Login
+// Login User
 const loginUserCtrl = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const findUser = await User.findOne({ email });
@@ -51,6 +51,42 @@ const loginUserCtrl = asyncHandler(async (req, res) => {
       mobile: findUser?.mobile,
       password: findUser?.password,
       token: generateToken(findUser?._id),
+    });
+  } else {
+    throw new Error("Invalid Credentials");
+  }
+});
+
+// Login User
+const loginAdmin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const findAdmin = await User.findOne({ email });
+  if(findAdmin.role !== 'admin') throw new Error("Not Authrised")
+  if (findAdmin && (await findAdmin.isPasswordMatched(password))) {
+    // refreshToken
+    const refreshToken = await generateRefreshToken(findAdmin?._id);
+    const updateuser = await User.findByIdAndUpdate(
+      findAdmin.id,
+      {
+        refreshToken: refreshToken,
+      },
+      {
+        new: true,
+      }
+    );
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      maxAge: 72 * 60 * 60 * 1000, //3 ngày
+    });
+
+    res.json({
+      _id: findAdmin?._id,
+      firstName: findAdmin?.firstName,
+      lastName: findAdmin?.lastName,
+      email: findAdmin?.email,
+      mobile: findAdmin?.mobile,
+      password: findAdmin?.password,
+      token: generateToken(findAdmin?._id),
     });
   } else {
     throw new Error("Invalid Credentials");
@@ -97,6 +133,26 @@ const logout = asyncHandler(async (req, res) => {
   res.sendStatus(204); //forbidden
 });
 
+// Save User Address
+const saveAddress = asyncHandler(async (req, res, next) =>{
+  const {_id} = req.user;
+  validateMongodbId(_id);
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      _id,
+      {
+        address: req?.body?.address
+      },
+      {
+        new: true,
+      }
+    );
+    res.json(updatedUser);
+  } catch (error) {
+    throw new Error(error);
+  }
+})
+
 // get all User
 const getallUser = asyncHandler(async (req, res) => {
   try {
@@ -120,11 +176,11 @@ const getUser = asyncHandler(async (req, res) => {
 });
 
 // Update Admin
-const updateAdmin = asyncHandler(async (req, res) => {
+const updatedUser = asyncHandler(async (req, res) => {
   const { _id } = req.user;
   validateMongodbId(_id);
   try {
-    const updateAdmin = await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       _id,
       {
         firstname: req?.body.firstname,
@@ -136,32 +192,12 @@ const updateAdmin = asyncHandler(async (req, res) => {
         new: true,
       }
     );
-    res.json(updateAdmin);
-  } catch (error) {
-    throw new Error(error);
-  }
-});
-
-const updatedUser = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  try {
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      {
-        firstName: req?.body?.firstName,
-        lastName: req?.body?.lastName,
-        email: req?.body?.email,
-        mobile: req?.body?.mobile,
-      },
-      {
-        new: true,
-      }
-    );
     res.json(updatedUser);
   } catch (error) {
     throw new Error(error);
   }
 });
+
 
 // Block User
 const blockUser = asyncHandler(async (req, res) => {
@@ -268,13 +304,23 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.json(user);
 });
 
+
+const getWishlist = asyncHandler (async (req, res) =>{
+  const {_id} = req.user;
+  try {
+    const findUser = await User.findById(_id).populate("wishlist");
+    res.json(findUser)
+  } catch (error) {
+    throw new Error(error)
+  }
+})
+
 module.exports = {
   createUser,
   loginUserCtrl,
   getallUser,
   getUser,
   deleteUser,
-  updateAdmin,
   updatedUser,
   blockUser,
   unblockUser,
@@ -282,5 +328,8 @@ module.exports = {
   logout,
   updatePassword,
   forgotPasswordToken,
-  resetPassword
+  resetPassword,
+  loginAdmin,
+  getWishlist,
+  saveAddress
 };
